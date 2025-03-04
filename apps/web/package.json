@@ -9,7 +9,8 @@
     "lint": "eslint . --max-warnings 0",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "clean": "if exist .turbo rmdir /s /q .turbo && if exist node_modules rmdir /s /q node_modules && if exist .next rmdir /s /q .next"
   },
   "dependencies": {
     "@repo/ui": "workspace:*",
@@ -21,7 +22,7 @@
     "@jest/globals": "^29.7.0",
     "@next/eslint-plugin-next": "^14.1.1",
     "@playwright/test": "^1.44.0",
-    "@repo/api": "workspace:*",
+    "@repo/shared": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/jest-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",

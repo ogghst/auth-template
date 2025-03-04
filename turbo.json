@@ -14,8 +14,13 @@
       ],
       "outputs": [
         ".next/**",
-        "!.next/cache/**"
+        "!.next/cache/**",
+        "dist/**"
       ]
+    },
+    "clean": {
+      "cache": false,
+      "persistent": true
     },
     "lint": {},
     "test": {},

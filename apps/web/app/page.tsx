@@ -1,11 +1,6 @@
 import { Suspense } from 'react';
 import Image from 'next/image';
 
-import { Link } from '@repo/api/links/entities/link.entity';
-
-import { Card } from '@repo/ui/card';
-import { Code } from '@repo/ui/code';
-import { Button } from '@repo/ui/button';
 
 import styles from './page.module.css';
 
@@ -32,45 +27,11 @@ const Gradient = ({
   );
 };
 
-const LinksSection = async () => {
-  const fetchLinks = async (): Promise<Link[]> => {
-    try {
-      return await (await fetch('http://localhost:3000/links')).json();
-    } catch (_) {
-      return [];
-    }
-  };
-
-  const links = await fetchLinks();
-
-  return (
-    <div className={styles.grid}>
-      {links.map(({ title, url, description }) => (
-        <Card className={styles.card} href={url} key={title} title={title}>
-          {description}
-        </Card>
-      ))}
-    </div>
-  );
-};
-
-const LinksSectionForTest = () => {
-  return (
-    <div className={styles.grid}>
-      <Card className={styles.card} href={'url'} title={'title'}>
-        description
-      </Card>
-    </div>
-  );
-};
 
 const RootPage = ({ params }: { params: { forTest?: boolean } }) => {
   return (
     <main className={styles.main}>
       <div className={styles.description}>
-        <p>
-          examples/<Code className={styles.code}>with-nestjs</Code>
-        </p>
         <div>
           <a
             href="https://vercel.com?utm_source=create-turbo&utm_medium=basic&utm_campaign=create-turbo"
@@ -90,9 +51,6 @@ const RootPage = ({ params }: { params: { forTest?: boolean } }) => {
         </div>
       </div>
 
-      <Button appName="web (with-nestjs)" className={styles.button}>
-        Click me!
-      </Button>
 
       <div className={styles.hero}>
         <div className={styles.heroContent}>
@@ -146,17 +104,6 @@ const RootPage = ({ params }: { params: { forTest?: boolean } }) => {
         </div>
       </div>
 
-      {/**
-       * @note Unsupported async component testing.
-       * Should limit the following constrain for a specific environment (dev or testing).
-       *
-       * @see https://nextjs.org/docs/app/building-your-application/testing/jest
-       */}
-      {params.forTest ? (
-        <LinksSectionForTest />
-      ) : (
-        <Suspense fallback={'Loading links...'}>{<LinksSection />}</Suspense>
-      )}
     </main>
   );
 };

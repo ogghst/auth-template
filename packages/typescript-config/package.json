@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
+  "scripts": {
+    "clean": "if exist .turbo rmdir /s /q .turbo && if exist node_modules rmdir /s /q node_modules"
+  },
   "publishConfig": {
     "access": "public"
   }
