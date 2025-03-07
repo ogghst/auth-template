@@ -1,3 +1,7 @@
+// This file provides a factory for creating instances of classes using reflection.
+// It leverages TypeScript's metadata reflection capabilities to dynamically
+// instantiate classes and inject dependencies as needed.
+
 const _get = <Value>(key: string, target: object) =>
   Reflect.getMetadata(key, target) as Value | undefined;
 

@@ -13,7 +13,13 @@
     "clean": "if exist .turbo rmdir /s /q .turbo && if exist node_modules rmdir /s /q node_modules && if exist .next rmdir /s /q .next"
   },
   "dependencies": {
-    "@repo/ui": "workspace:*",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fontsource/roboto": "^5.2.5",
+    "@mui/icons-material": "^6.4.7",
+    "@mui/material": "^6.4.7",
+    "@repo/shared": "workspace:*",
+    "@repo/storage": "workspace:*",
     "next": "^14.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -22,9 +28,9 @@
     "@jest/globals": "^29.7.0",
     "@next/eslint-plugin-next": "^14.1.1",
     "@playwright/test": "^1.44.0",
-    "@repo/shared": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/jest-config": "workspace:*",
+    "@repo/shared": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@testing-library/jest-dom": "^6.4.5",
     "@testing-library/react": "^15.0.7",

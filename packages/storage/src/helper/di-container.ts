@@ -1,3 +1,7 @@
+// This file sets up a Dependency Injection (DI) container for managing dependencies
+// within the application. It allows for easy injection and management of services
+// and other dependencies throughout the application lifecycle.
+
 import { AppDataSource } from "../orm-config";
 import { reflectFactory } from "./reflect-factory";
 
