@@ -1,7 +1,5 @@
 /** @type {import("prettier").Config} */
 module.exports = {
-  singleQuote: true,
-  rules: {
-    'linebreak-style': 'off',
-  },
+  singleQuote: true, // Use single quotes
+  endOfLine: 'auto', // Use consistent line endings (auto detects and preserves existing line endings)
 };
