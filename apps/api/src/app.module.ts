@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as path from 'path';
+import { AppDataSource } from './database/data-source';
 
 import { AppService } from './app.service';
 import { AppController } from './app.controller';
@@ -17,12 +18,8 @@ import { Token } from './entities/token.entity';
       envFilePath: path.resolve(process.cwd(), '.env'),
       expandVariables: true,
     }),
-    TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: path.join(process.cwd(), 'db', 'app-database.sqlite'),
-      entities: [User, Token],
-      synchronize: true,
-      logging: true,
+    TypeOrmModule.forRootAsync({
+      useFactory: () => AppDataSource.options,
     }),
     UserModule,
     AuthModule,

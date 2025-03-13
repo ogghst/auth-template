@@ -13,7 +13,14 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
-    "clean": "if exist .turbo rmdir /s /q .turbo && if exist node_modules rmdir /s /q node_modules && if exist dist rmdir /s /q dist"
+    "clean": "if exist .turbo rmdir /s /q .turbo && if exist node_modules rmdir /s /q node_modules && if exist dist rmdir /s /q dist",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "migration:generate": "pnpm typeorm migration:generate -d src/database/data-source.ts",
+    "migration:run": "pnpm typeorm migration:run -d src/database/data-source.ts",
+    "migration:revert": "pnpm typeorm migration:revert -d src/database/data-source.ts",
+    "schema:sync": "pnpm typeorm schema:sync -d src/database/data-source.ts",
+    "schema:drop": "pnpm typeorm schema:drop -d src/database/data-source.ts",
+    "schema:log": "pnpm typeorm schema:log -d src/database/data-source.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.11",
@@ -24,8 +31,10 @@
     "@nestjs/platform-express": "^11.0.11",
     "@nestjs/typeorm": "^11.0.0",
     "@repo/shared": "workspace:*",
+    "axios": "^1.8.3",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-jwt": "^4.0.1",

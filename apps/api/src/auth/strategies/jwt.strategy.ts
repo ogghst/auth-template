@@ -4,6 +4,20 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../services/auth.service';
 import { TokenPayload } from '../interfaces/token-payload.interface';
+import { Request } from 'express';
+
+// Create a custom extractor that tries multiple methods
+const fromAuthHeaderAsBearerTokenOrCookie = (req: Request) => {
+  // First try to get the token from the Authorization header
+  let token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+
+  // If not found, try to get it from a cookie
+  if (!token && req.cookies) {
+    token = req.cookies['access_token'];
+  }
+
+  return token;
+};
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -12,7 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private authService: AuthService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: fromAuthHeaderAsBearerTokenOrCookie,
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET'),
     });
