@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
+import { authApi } from './lib/apiClient';
 
 // Define the types more specifically
 interface TokenProps {
@@ -76,31 +77,15 @@ export const {
               '[JWT] Getting our own JWT from backend using GitHub token',
             );
 
-            // Exchange the GitHub token for our application JWT
-            const response = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL}/auth/exchange-token`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  provider: 'github',
-                  access_token: account.access_token,
-                }),
-                credentials: 'include',
-              },
-            );
-
-            if (response.ok) {
-              const data = await response.json();
+            // Exchange the GitHub token for our application JWT using our API client
+            try {
+              const data = await authApi.exchangeGithubToken(
+                account.access_token,
+              );
               token.jwt = data.accessToken;
               console.log('[JWT] Successfully obtained application JWT');
-            } else {
-              console.error(
-                '[JWT] Failed to exchange GitHub token:',
-                response.status,
-              );
+            } catch (error) {
+              console.error('[JWT] Failed to exchange GitHub token:', error);
             }
           } catch (error) {
             console.error('[JWT] Error exchanging GitHub token:', error);

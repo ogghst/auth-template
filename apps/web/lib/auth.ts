@@ -1,5 +1,6 @@
 import { signIn } from '@/auth';
 import { generatePKCECodes } from './pkce';
+import { authApi } from './apiClient';
 
 /**
  * Initiates GitHub login with PKCE
@@ -59,9 +60,8 @@ export function getStoredCodeVerifier(): string | null {
  */
 export async function isAuthenticated(): Promise<boolean> {
   try {
-    const session = await fetch('/api/auth/session');
-    const data = await session.json();
-    return !!data.user;
+    const sessionData = await authApi.checkSession();
+    return !!sessionData?.user;
   } catch (error) {
     console.error('[Auth] Error checking authentication:', error);
     return false;

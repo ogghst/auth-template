@@ -1,4 +1,5 @@
 import { auth } from '@/auth';
+import { userApi } from '@/lib/apiClient';
 import {
   Typography,
   Container,
@@ -12,7 +13,6 @@ import {
   ListItemText,
   Divider,
   CircularProgress,
-  Alert,
 } from '@mui/material';
 
 async function getUsers() {
@@ -23,18 +23,7 @@ async function getUsers() {
   }
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user`, {
-      headers: {
-        Authorization: `Bearer ${session.jwt}`,
-      },
-      cache: 'no-store', // Don't cache this data
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch users: ${response.status}`);
-    }
-
-    return response.json();
+    return await userApi.getUsers(session.jwt);
   } catch (error) {
     console.error('Error fetching users:', error);
     throw error;
@@ -42,83 +31,85 @@ async function getUsers() {
 }
 
 export default async function UsersPage() {
-  let users = [];
-  let error = null;
+  let users;
+  let error;
 
   try {
     users = await getUsers();
-  } catch (err) {
-    error = err.message;
+  } catch (e) {
+    console.error('Error in UsersPage:', e);
+    error = e instanceof Error ? e.message : 'An error occurred';
+  }
+
+  if (error) {
+    return (
+      <Container sx={{ py: 4 }}>
+        <Card sx={{ bgcolor: '#fdeded', color: '#5f2120', mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" component="div">
+              Error
+            </Typography>
+            <Typography variant="body1">{error}</Typography>
+          </CardContent>
+        </Card>
+      </Container>
+    );
+  }
+
+  if (!users) {
+    return (
+      <Container sx={{ py: 4, textAlign: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Typography variant="h3" component="h1" gutterBottom>
-        User Directory
+    <Container sx={{ py: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Users
       </Typography>
-
-      {error ? (
-        <Alert severity="error" sx={{ mb: 4 }}>
-          {error}
-        </Alert>
-      ) : users.length === 0 ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <Card>
-          <List sx={{ width: '100%' }}>
-            {users.map((user, index) => (
+      <Card>
+        <CardContent>
+          <List>
+            {users.map((user: any, index: number) => (
               <Box key={user.id}>
-                {index > 0 && <Divider variant="inset" component="li" />}
+                {index > 0 && <Divider component="li" />}
                 <ListItem alignItems="flex-start">
                   <ListItemAvatar>
                     <Avatar
-                      alt={user.displayName || user.username}
+                      alt={user.displayName || user.username || 'User'}
                       src={user.avatarUrl}
                     />
                   </ListItemAvatar>
                   <ListItemText
-                    primary={user.displayName || user.username}
+                    primary={user.displayName || user.username || 'Anonymous'}
                     secondary={
                       <>
                         <Typography
                           component="span"
                           variant="body2"
                           color="text.primary"
+                          display="block"
                         >
-                          {user.email}
+                          {user.email || 'No email provided'}
                         </Typography>
                         {user.githubProfileUrl && (
                           <Typography
-                            component="div"
                             variant="body2"
-                            sx={{ mt: 0.5 }}
+                            component="span"
+                            display="block"
                           >
+                            GitHub:{' '}
                             <a
                               href={user.githubProfileUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{
-                                color: 'inherit',
-                                textDecoration: 'underline',
-                              }}
                             >
-                              GitHub Profile
+                              {user.username}
                             </a>
                           </Typography>
                         )}
-                        <Typography
-                          component="div"
-                          variant="caption"
-                          sx={{ mt: 0.5 }}
-                        >
-                          User ID: {user.id}
-                        </Typography>
-                        <Typography component="div" variant="caption">
-                          Joined:{' '}
-                          {new Date(user.createdAt).toLocaleDateString()}
-                        </Typography>
                       </>
                     }
                   />
@@ -126,8 +117,8 @@ export default async function UsersPage() {
               </Box>
             ))}
           </List>
-        </Card>
-      )}
+        </CardContent>
+      </Card>
     </Container>
   );
 }
