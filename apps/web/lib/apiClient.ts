@@ -39,13 +39,26 @@ const processQueue = () => {
 // Helper to handle response errors
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
-    const error: ApiError = new Error(`API Error: ${response.status}`);
+    const error: ApiError = new Error(
+      `API Error: ${response.status} - ${response.statusText}`,
+    );
     error.status = response.status;
 
     try {
       error.data = await response.json();
+      error.message = error.data?.message || error.message;
     } catch (e) {
       error.data = await response.text();
+    }
+
+    // Specific handling for 401 errors
+    if (error.status === 401) {
+      console.error('Authentication failed:', error.data);
+      // Clear invalid tokens
+      document.cookie =
+        'access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      document.cookie =
+        'refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     }
 
     throw error;
@@ -67,12 +80,8 @@ class ApiClient {
    */
   private async refreshToken(): Promise<string | null> {
     if (isRefreshing) {
-      // Return a promise that resolves when the refresh is complete
       return new Promise<string | null>((resolve) => {
-        refreshQueue.push(() => {
-          // This will be called with the new token after refresh completes
-          resolve(null); // Null means "use the cookie"
-        });
+        refreshQueue.push(() => resolve(null));
       });
     }
 
@@ -82,20 +91,25 @@ class ApiClient {
       const result = await this.post<{ accessToken: string }>(
         '/auth/refresh',
         null,
-        {
-          skipRefreshToken: true, // Prevent infinite loop
-        },
+        { skipRefreshToken: true },
       );
 
-      const newToken = result.accessToken;
+      if (!result?.accessToken) {
+        throw new Error('No access token in refresh response');
+      }
+
       isRefreshing = false;
       processQueue();
-      return newToken;
+      return result.accessToken;
     } catch (error) {
       console.error('Token refresh failed:', error);
       isRefreshing = false;
       processQueue();
-      throw error;
+
+      // Force logout on refresh failure
+      await authApi.logout();
+      window.location.href = '/auth-error?code=session_expired';
+      return null;
     }
   }
 
@@ -315,7 +329,20 @@ export const authApi = {
    * Logout user (revoke tokens)
    */
   logout: async () => {
-    return apiClient.post('/auth/logout');
+    try {
+      // Clear frontend cookies
+      document.cookie =
+        'access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      document.cookie =
+        'refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+
+      // Call backend logout
+      return apiClient.post('/auth/logout', null, {
+        skipRefreshToken: true,
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   },
 };
 

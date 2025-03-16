@@ -10,8 +10,8 @@ import { TokenService } from './services/token.service';
 import { GithubStrategy } from './strategies/github.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UserModule } from '../user/user.module';
-import { User } from '../entities/user.entity';
-import { Token } from '../entities/token.entity';
+import { User } from '@/entities/user.entity';
+import { Token } from '@/entities/token.entity';
 
 @Module({
   imports: [

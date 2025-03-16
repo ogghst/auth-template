@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { User } from '../../entities/user.entity';
+import { User } from '@/entities/user.entity';
 import axios, { AxiosError } from 'axios';
 import { AuthResponseDto } from '../dtos/auth-response.dto';
 

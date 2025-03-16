@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
-import { Token } from '../../entities/token.entity';
+import { Token } from '@/entities/token.entity';
 import { TokenPayload } from '../interfaces/token-payload.interface';
 
 @Injectable()

@@ -1,0 +1,58 @@
+{
+  "name": "@repo/storage",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "clean": "if exist .turbo rmdir /s /q .turbo && if exist node_modules rmdir /s /q node_modules && if exist dist rmdir /s /q dist",
+    "dev": "pnpm build --watch",
+    "build": "tsc -b -v",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "migration:generate": "pnpm typeorm migration:generate -d src/database/data-source.ts",
+    "migration:run": "pnpm typeorm migration:run -d src/database/data-source.ts",
+    "migration:revert": "pnpm typeorm migration:revert -d src/database/data-source.ts",
+    "schema:sync": "pnpm typeorm schema:sync -d src/database/data-source.ts",
+    "schema:drop": "pnpm typeorm schema:drop -d src/database/data-source.ts",
+    "schema:log": "pnpm typeorm schema:log -d src/database/data-source.ts"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "./dist/**"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./*": {
+      "import": "./dist/*.js",
+      "require": "./dist/*.js"
+    }
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7",
+    "typeorm": "^0.3.21",
+    "uuid": "^11.1.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.13.9",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "typescript": "5.8.2"
+  }
+}

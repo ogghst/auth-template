@@ -51,6 +51,8 @@
     "@nestjs/testing": "^11.0.11",
     "@repo/eslint-config": "workspace:*",
     "@repo/jest-config": "workspace:*",
+    "@repo/shared": "workspace:*",
+    "@repo/storage": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
