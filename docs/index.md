@@ -1,111 +1,39 @@
----
-layout: home
-title: Auth Template Documentation
-titleTemplate: Next.js and NestJS Authentication Template
+# Auth Template Documentation
 
-hero:
-  name: Auth Template
-  text: Next.js and NestJS Authentication Template
-  tagline: A secure, full-stack authentication template with GitHub OAuth
-  actions:
-    - theme: brand
-      text: Get Started
-      link: /guide/getting-started
-    - theme: alt
-      text: View on GitHub
-      link: https://github.com/yourusername/your-repo-name
+A secure full-stack authentication template using Next.js 14 and NestJS 10.
 
-features:
-  - icon: 🔐
-    title: Secure Authentication
-    details: Built-in GitHub OAuth integration with JWT token management and secure session handling
-  - icon: ⚡️
-    title: Modern Stack
-    details: Next.js 14 frontend with App Router and NestJS 10 backend for optimal performance
-  - icon: 🛠️
-    title: Developer Experience
-    details: TypeScript support, ESLint configuration, and Turborepo monorepo setup
-  - icon: 📦
-    title: Production Ready
-    details: Includes deployment configurations, environment management, and security best practices
+## Quick Start
 
-head:
-  - - meta
-    - name: description
-      content: A secure full-stack authentication template using Next.js and NestJS
-  - - meta
-    - name: keywords
-      content: nextjs, nestjs, authentication, oauth, github, typescript
----
+- [Introduction](guide/introduction.md)
+- [Getting Started](guide/getting-started.md)
+- [API Reference](api/index.md)
+- [Authentication Flow](auth/flow.md)
 
-<div class="vp-doc">
+## Features
 
-# Quick Navigation
+- **Secure Authentication**: Built-in GitHub OAuth integration with JWT token management
+- **Modern Stack**: Next.js 14 frontend with App Router and NestJS 10 backend
+- **Type Safety**: Full TypeScript support across the entire stack
+- **Database Integration**: SQLite with TypeORM for data persistence
+- **Monorepo Structure**: Organized using Turborepo
 
-<div class="quick-links">
+## Documentation Sections
 
-## 📚 Documentation
+### Setup & Configuration
 
-- [Introduction](/guide/introduction)
-- [Getting Started](/guide/getting-started)
-- [API Reference](/api/)
-- [Authentication Flow](/auth/flow)
+- [Environment Setup](guide/getting-started.md#installation)
+- [GitHub OAuth Setup](guide/getting-started.md#github-oauth-setup)
+- [Database Configuration](guide/getting-started.md#database-setup)
+- [Deployment Guide](guide/getting-started.md#deployment)
 
-## 🔧 Setup & Configuration
+### API & Authentication
 
-- [Environment Setup](/guide/getting-started#installation)
-- [GitHub OAuth Setup](/guide/getting-started#github-oauth-setup)
-- [Database Configuration](/guide/getting-started#database-setup)
-- [Deployment Guide](/guide/getting-started#deployment)
+- [API Documentation](api/index.md)
+- [Authentication Flow](auth/flow.md)
+- [Troubleshooting](guide/getting-started.md#troubleshooting)
 
-## 🚀 Features
+### Resources
 
-- Secure Authentication with GitHub OAuth
-- JWT Token Management
-- TypeScript Support
-- Monorepo Structure
-- API Documentation
-- Automated Testing
-
-## 💡 Resources
-
-- [API Documentation](/api/)
-- [Authentication Flow](/auth/flow)
-- [Troubleshooting](/guide/getting-started#troubleshooting)
+- [GitHub Repository](https://github.com/yourusername/your-repo-name)
 - [Contributing Guidelines](https://github.com/yourusername/your-repo-name/blob/main/CONTRIBUTING.md)
-
-</div>
-
-</div>
-
-<style>
-.quick-links {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
-}
-
-.quick-links h2 {
-  font-size: 1.2rem;
-  margin-bottom: 10px;
-}
-
-.quick-links ul {
-  list-style: none;
-  padding: 0;
-}
-
-.quick-links li {
-  margin: 8px 0;
-}
-
-.quick-links a {
-  color: var(--vp-c-brand);
-  text-decoration: none;
-}
-
-.quick-links a:hover {
-  text-decoration: underline;
-}
-</style>
+- [Report Issues](https://github.com/yourusername/your-repo-name/issues)

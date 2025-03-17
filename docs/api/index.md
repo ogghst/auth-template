@@ -2,20 +2,20 @@
 
 ## Base URL
 
-The API base URL depends on your environment:
-
 - Development: `http://localhost:4000`
 - Production: Your deployed API URL
 
 ## Authentication
 
-All API endpoints except for authentication-related ones require a valid JWT token in the Authorization header:
+All protected endpoints require a JWT token in the Authorization header:
 
 ```http
 Authorization: Bearer <your-jwt-token>
 ```
 
-### Authentication Endpoints
+## Endpoints
+
+### Authentication
 
 #### Exchange GitHub Token
 
@@ -26,8 +26,11 @@ Content-Type: application/json
 {
   "code": "github-oauth-code"
 }
+```
 
-Response 200:
+Response:
+
+```json
 {
   "accessToken": "jwt-token",
   "user": {
@@ -47,8 +50,11 @@ Content-Type: application/json
 {
   "refreshToken": "refresh-token"
 }
+```
 
-Response 200:
+Response:
+
+```json
 {
   "accessToken": "new-jwt-token"
 }
@@ -59,22 +65,28 @@ Response 200:
 ```http
 POST /auth/logout
 Authorization: Bearer <your-jwt-token>
+```
 
-Response 200:
+Response:
+
+```json
 {
   "message": "Logged out successfully"
 }
 ```
 
-### User Endpoints
+### Users
 
 #### Get Current User
 
 ```http
 GET /user
 Authorization: Bearer <your-jwt-token>
+```
 
-Response 200:
+Response:
+
+```json
 {
   "id": "user-id",
   "email": "user@example.com",
@@ -89,8 +101,11 @@ Response 200:
 ```http
 GET /user/all
 Authorization: Bearer <your-jwt-token>
+```
 
-Response 200:
+Response:
+
+```json
 [
   {
     "id": "user-id",
@@ -104,7 +119,7 @@ Response 200:
 
 ## Error Responses
 
-The API uses standard HTTP status codes and returns errors in the following format:
+The API uses standard HTTP status codes and returns errors in this format:
 
 ```json
 {
@@ -124,41 +139,14 @@ The API uses standard HTTP status codes and returns errors in the following form
 - `404`: Not Found
 - `500`: Internal Server Error
 
-### Error Examples
-
-#### Invalid Token
-
-```http
-Status: 401 Unauthorized
-{
-  "statusCode": 401,
-  "message": "Invalid token",
-  "error": "Unauthorized"
-}
-```
-
-#### Token Expired
-
-```http
-Status: 401 Unauthorized
-{
-  "statusCode": 401,
-  "message": "Token expired",
-  "error": "Unauthorized"
-}
-```
-
 ## Rate Limiting
 
-The API implements rate limiting to prevent abuse:
-
-- 100 requests per minute per IP address
+- 100 requests per minute per IP
 - 1000 requests per hour per user
 
-When rate limit is exceeded:
+Rate limit exceeded response:
 
-```http
-Status: 429 Too Many Requests
+```json
 {
   "statusCode": 429,
   "message": "Too many requests",
@@ -168,13 +156,13 @@ Status: 429 Too Many Requests
 
 ## Pagination
 
-Endpoints that return lists support pagination using query parameters:
+List endpoints support pagination:
 
 ```http
 GET /user/all?page=1&limit=10
 ```
 
-Response includes pagination metadata:
+Response includes metadata:
 
 ```json
 {
