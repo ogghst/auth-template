@@ -8,3 +8,6 @@ show_downloads: false
 
 github:
   repository_url: https://github.com/ogghst/auth-template
+
+include:
+  - _includes
