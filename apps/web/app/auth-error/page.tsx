@@ -1,62 +1,63 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { Container, Typography, Button, Box, Paper } from '@mui/material';
-import ErrorIcon from '@mui/icons-material/Error';
-import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+// Error messages for different error codes
+const errorMessages: Record<string, string> = {
+  session_expired: 'Your session has expired. Please sign in again.',
+  default: 'An authentication error occurred.',
+  access_denied: 'Access was denied. Please check your permissions.',
+  invalid_token: 'Invalid authentication token.',
+  logout_failed: 'Failed to log out properly.',
+  configuration: 'Authentication system configuration error.',
+};
 
 export default function AuthErrorPage() {
   const searchParams = useSearchParams();
-  const error = searchParams.get('error') || 'An authentication error occurred';
+  const router = useRouter();
+  const [countdown, setCountdown] = useState(5);
+
+  // Get error code from URL
+  const errorCode = searchParams.get('code') || 'default';
+  const errorMessage = errorMessages[errorCode] || errorMessages.default;
+
+  // Auto-redirect to login after countdown
+  useEffect(() => {
+    if (countdown <= 0) {
+      router.push('/login');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown(countdown - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [countdown, router]);
 
   return (
-    <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Paper
-        elevation={3}
-        sx={{
-          p: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          borderRadius: 2,
-        }}
-      >
-        <ErrorIcon color="error" sx={{ fontSize: 60, mb: 2 }} />
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="max-w-md w-full px-6 py-8 bg-white shadow-md rounded-lg">
+        <div className="text-center">
+          <h1 className="text-red-600 text-4xl mb-4">Authentication Error</h1>
 
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          Authentication Error
-        </Typography>
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+            {errorMessage}
+          </div>
 
-        <Typography
-          variant="body1"
-          paragraph
-          align="center"
-          color="text.secondary"
-        >
-          {error}
-        </Typography>
+          <p className="mb-6 text-gray-600">
+            You will be redirected to the login page in {countdown} seconds...
+          </p>
 
-        <Typography
-          variant="body2"
-          paragraph
-          align="center"
-          color="text.secondary"
-          sx={{ mb: 4 }}
-        >
-          There was a problem with the authentication process. Please try again
-          or contact support if the issue persists.
-        </Typography>
-
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button component={Link} href="/" variant="contained" color="primary">
-            Return Home
-          </Button>
-
-          <Button component={Link} href="/api/auth/signin" variant="outlined">
-            Try Again
-          </Button>
-        </Box>
-      </Paper>
-    </Container>
+          <button
+            onClick={() => router.push('/login')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

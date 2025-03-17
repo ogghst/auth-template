@@ -3,8 +3,6 @@
  * This encapsulates the fetch API and provides a consistent interface for making requests
  */
 
-import { Session } from 'next-auth';
-
 // Base URL from environment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -14,15 +12,23 @@ const DEFAULT_HEADERS = {
 };
 
 // Types
-interface RequestOptions extends RequestInit {
-  token?: string;
-  params?: Record<string, string>;
-  skipRefreshToken?: boolean; // Skip token refresh for specific requests (like the refresh call itself)
+interface RequestOptions {
+  skipRefreshToken?: boolean;
+  headers?: Record<string, string>;
 }
 
 interface ApiError extends Error {
   status?: number;
   data?: any;
+}
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Flag to prevent multiple token refresh requests
@@ -54,11 +60,6 @@ const handleResponse = async (response: Response) => {
     // Specific handling for 401 errors
     if (error.status === 401) {
       console.error('Authentication failed:', error.data);
-      // Clear invalid tokens
-      document.cookie =
-        'access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      document.cookie =
-        'refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     }
 
     throw error;
@@ -75,40 +76,57 @@ const handleResponse = async (response: Response) => {
 
 // Main API client class
 class ApiClient {
+  private options: {
+    baseUrl: string;
+  };
+
+  constructor() {
+    this.options = {
+      baseUrl: API_BASE_URL,
+    };
+  }
+
   /**
-   * Handles token refresh when a request fails with 401 Unauthorized
+   * Checks if a URL is absolute (starts with http:// or https://)
    */
-  private async refreshToken(): Promise<string | null> {
-    if (isRefreshing) {
-      return new Promise<string | null>((resolve) => {
-        refreshQueue.push(() => resolve(null));
-      });
-    }
+  private isAbsoluteUrl(url: string): boolean {
+    return /^https?:\/\//i.test(url);
+  }
 
-    isRefreshing = true;
-
+  /**
+   * Refreshes an expired JWT token
+   */
+  async refreshToken(): Promise<string | null> {
     try {
-      const result = await this.post<{ accessToken: string }>(
-        '/auth/refresh',
-        null,
-        { skipRefreshToken: true },
-      );
+      console.log('Refreshing token...');
 
-      if (!result?.accessToken) {
-        throw new Error('No access token in refresh response');
+      // Use the absolute URL when in server component (no window object)
+      const baseUrl =
+        typeof window === 'undefined'
+          ? process.env.NEXTAUTH_URL || 'http://localhost:3000'
+          : '';
+
+      const refreshUrl = `${baseUrl}/api/auth/refresh`;
+      console.log(`[API Client] Refresh token URL: ${refreshUrl}`);
+
+      const response = await fetch(refreshUrl, {
+        method: 'POST',
+        credentials: 'include', // Include cookies
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        console.error('Token refresh failed:', data.message);
+        return null;
       }
 
-      isRefreshing = false;
-      processQueue();
-      return result.accessToken;
+      const data = await response.json();
+      return data.accessToken;
     } catch (error) {
-      console.error('Token refresh failed:', error);
-      isRefreshing = false;
-      processQueue();
-
-      // Force logout on refresh failure
-      await authApi.logout();
-      window.location.href = '/auth-error?code=session_expired';
+      console.error('Error refreshing token:', error);
       return null;
     }
   }
@@ -116,148 +134,179 @@ class ApiClient {
   /**
    * Makes a request to the API
    */
-  private async request<T = any>(
-    endpoint: string,
+  private async request<T>(
+    method: string,
+    url: string,
+    data?: any,
     options: RequestOptions = {},
-  ): Promise<T> {
-    const {
-      token,
-      params,
-      skipRefreshToken = false,
-      ...fetchOptions
-    } = options;
+  ): Promise<T | null> {
+    const { skipRefreshToken = false } = options;
 
-    // Build URL with query parameters
-    let url = `${API_BASE_URL}${endpoint}`;
-    if (params) {
-      const searchParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        searchParams.append(key, value);
-      });
-      url += `?${searchParams.toString()}`;
-    }
-
-    // Prepare headers
-    const headers = new Headers(DEFAULT_HEADERS);
-
-    // Add authorization header if token provided
-    if (token) {
-      headers.append('Authorization', `Bearer ${token}`);
-    }
-
-    // Merge with any custom headers
-    if (fetchOptions.headers) {
-      Object.entries(fetchOptions.headers).forEach(([key, value]) => {
-        headers.append(key, value);
-      });
-    }
-
-    // Make the request
     try {
-      const response = await fetch(url, {
-        ...fetchOptions,
+      // Default headers
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add custom headers from options
+      if (options.headers) {
+        Object.entries(options.headers).forEach(([key, value]) => {
+          headers[key] = value;
+        });
+      }
+
+      // Build request options
+      const fetchOptions: RequestInit = {
+        method,
         headers,
         credentials: 'include', // Always include cookies
-      });
+      };
+
+      if (data && method !== 'GET') {
+        fetchOptions.body = JSON.stringify(data);
+      }
+
+      // Check if we're running on the server
+      const isServer = typeof window === 'undefined';
+      if (isServer) {
+        console.log(
+          `[API Client] Running in server environment, skipping credentials`,
+        );
+        // In server environment, we can't use credentials but need to pass Authorization explicitly
+        delete fetchOptions.credentials;
+      }
+
+      // Build full URL for the API
+      let fullUrl: string;
+
+      // If this is an absolute URL, use it directly
+      if (this.isAbsoluteUrl(url)) {
+        fullUrl = url;
+      } else {
+        // Otherwise, prefix with base URL
+        fullUrl = `${this.options.baseUrl}${url}`;
+        console.log(
+          `[API Client] ${isServer ? 'Server' : 'Client'} requesting: ${method} ${fullUrl}`,
+        );
+      }
+
+      // Make the request
+      let response = await fetch(fullUrl, fetchOptions);
 
       // Handle 401 Unauthorized errors by refreshing the token
       if (response.status === 401 && !skipRefreshToken) {
-        console.log('Token expired, attempting refresh');
-
-        // Try to refresh the token
+        console.log(
+          '[API Client] Unauthorized response, attempting token refresh',
+        );
         const newToken = await this.refreshToken();
 
-        // If we have a new token, retry the request with it
         if (newToken) {
-          headers.set('Authorization', `Bearer ${newToken}`);
+          console.log(
+            '[API Client] Token refreshed successfully, retrying original request',
+          );
+          // Update Authorization header with new token
+          headers['Authorization'] = `Bearer ${newToken}`;
+          // Retry the original request
+          response = await fetch(fullUrl, { ...fetchOptions, headers });
+        } else {
+          console.log(
+            '[API Client] Token refresh failed, redirecting to login',
+          );
+          // If we're on the client side, redirect to login
+          if (!isServer) {
+            window.location.href = '/login';
+          }
+          return null;
         }
-
-        // Retry the original request
-        const retryResponse = await fetch(url, {
-          ...fetchOptions,
-          headers,
-          credentials: 'include',
-        });
-
-        return handleResponse(retryResponse);
       }
 
-      return handleResponse(response);
+      // Handle successful responses
+      if (response.ok) {
+        // If response is empty, return null
+        if (response.status === 204) {
+          return null;
+        }
+
+        // Parse JSON response
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          console.log('[API Client] Successful response:', method, url);
+          return data as T;
+        }
+        return null;
+      }
+
+      // Handle error responses
+      console.error(`[API Client] Error ${response.status}:`, method, url);
+      try {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || `Request failed with status ${response.status}`,
+        );
+      } catch (parseError) {
+        // If we can't parse the error as JSON, return the status text
+        throw new Error(
+          `Request failed with status ${response.status}: ${response.statusText}`,
+        );
+      }
     } catch (error) {
-      console.error(`API request failed: ${endpoint}`, error);
+      console.error('[API Client] Request error:', method, url, error);
       throw error;
     }
   }
 
   /**
-   * GET request
+   * Makes a GET request to the API
    */
-  public async get<T = any>(
+  async get<T>(
     endpoint: string,
     options: RequestOptions = {},
-  ): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'GET',
-    });
+  ): Promise<T | null> {
+    return this.request<T>('GET', endpoint, undefined, options);
   }
 
   /**
-   * POST request
+   * Makes a POST request to the API
    */
-  public async post<T = any>(
+  async post<T>(
     endpoint: string,
-    data?: any,
+    data: any = null,
     options: RequestOptions = {},
-  ): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
-    });
+  ): Promise<T | null> {
+    return this.request<T>('POST', endpoint, data, options);
   }
 
   /**
-   * PUT request
+   * Makes a PUT request to the API
    */
-  public async put<T = any>(
+  async put<T>(
     endpoint: string,
-    data?: any,
+    data: any = null,
     options: RequestOptions = {},
-  ): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
-    });
+  ): Promise<T | null> {
+    return this.request<T>('PUT', endpoint, data, options);
   }
 
   /**
-   * PATCH request
+   * Makes a PATCH request to the API
    */
-  public async patch<T = any>(
+  async patch<T>(
     endpoint: string,
-    data?: any,
+    data: any = null,
     options: RequestOptions = {},
-  ): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
-    });
+  ): Promise<T | null> {
+    return this.request<T>('PATCH', endpoint, data, options);
   }
 
   /**
-   * DELETE request
+   * Makes a DELETE request to the API
    */
-  public async delete<T = any>(
+  async delete<T>(
     endpoint: string,
     options: RequestOptions = {},
-  ): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'DELETE',
-    });
+  ): Promise<T | null> {
+    return this.request<T>('DELETE', endpoint, undefined, options);
   }
 }
 
@@ -330,18 +379,15 @@ export const authApi = {
    */
   logout: async () => {
     try {
-      // Clear frontend cookies
-      document.cookie =
-        'access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      document.cookie =
-        'refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-
       // Call backend logout
-      return apiClient.post('/auth/logout', null, {
+      await apiClient.post('/auth/logout', null, {
         skipRefreshToken: true,
       });
+
+      return true;
     } catch (error) {
       console.error('Logout failed:', error);
+      return false;
     }
   },
 };
@@ -351,22 +397,22 @@ export const userApi = {
   /**
    * Get current user profile
    */
-  getProfile: async (token: string) => {
-    return apiClient.get('/auth/me', { token });
+  getProfile: async () => {
+    return apiClient.get('/auth/me');
   },
 
   /**
    * Get all users
    */
-  getUsers: async (token: string) => {
-    return apiClient.get('/user', { token });
+  getUsers: async () => {
+    return apiClient.get<User[]>('/user');
   },
 
   /**
    * Get user by ID
    */
-  getUserById: async (id: string, token: string) => {
-    return apiClient.get(`/user/${id}`, { token });
+  getUserById: async (id: string) => {
+    return apiClient.get(`/user/${id}`);
   },
 };
 

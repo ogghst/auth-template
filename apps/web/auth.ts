@@ -1,40 +1,89 @@
 import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { authApi } from './lib/apiClient';
+import { exchangeGithubToken } from './lib/serverActions';
 
 // Define the types more specifically
+interface User {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+}
+
+interface JWT {
+  accessToken?: string;
+  refreshToken?: string;
+  sub?: string;
+  userId?: string;
+  userEmail?: string;
+  userName?: string;
+}
+
 interface TokenProps {
-  token: any;
-  user?: any;
-  account?: any;
+  token: JWT;
+  user?: User;
+  account?: {
+    provider: string;
+    access_token?: string;
+    providerAccountId?: string;
+  };
+  profile?: any;
   trigger?: 'signIn' | 'signUp' | 'update';
 }
 
 interface SessionProps {
-  session: any;
-  token: any;
+  session: {
+    user: User;
+    expires: string;
+    accessToken?: string; // Store token directly in session
+  };
+  token: JWT;
 }
 
 // Store PKCE code verifier in memory when needed
 let codeVerifier: string | null = null;
 
+/**
+ * Auth.js configuration
+ * @see https://authjs.dev/guides/upgrade-to-v5
+ */
 export const {
   handlers,
   signIn,
   signOut,
   auth,
 }: { handlers: any; signIn: any; signOut: any; auth: any } = NextAuth({
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: true, // Enable debug mode
   providers: [
     GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      clientId: process.env.GITHUB_CLIENT_ID || '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
       authorization: {
+        url: 'https://github.com/login/oauth/authorize',
         params: {
-          // Enable PKCE
-          code_challenge_method: 'S256',
+          scope: 'read:user user:email',
         },
+      },
+      token: {
+        url: 'https://github.com/login/oauth/access_token',
+      },
+      userinfo: {
+        url: 'https://api.github.com/user',
+      },
+      profile(profile: any) {
+        console.log(
+          '[GitHub Provider] Profile:',
+          JSON.stringify(profile, null, 2),
+        );
+        return {
+          id: profile.id.toString(),
+          name: profile.name || profile.login,
+          email: profile.email,
+          image: profile.avatar_url,
+        };
       },
     }),
   ],
@@ -42,85 +91,151 @@ export const {
     signIn: '/',
     error: '/auth-error',
   },
-  debug: process.env.NODE_ENV === 'development',
   callbacks: {
-    async jwt({ token, account, user, trigger }: TokenProps) {
-      console.log(`[JWT] Callback triggered by: ${trigger || 'unknown'}`);
+    async jwt({ token, account, profile }: TokenProps): Promise<JWT> {
+      console.log('[JWT] Callback starting');
+      console.log(`[JWT] Token before:`, JSON.stringify(token, null, 2));
+      console.log(
+        `[JWT] Account:`,
+        account ? JSON.stringify(account, null, 2) : 'null',
+      );
 
-      // On sign in with account data (initial OAuth response)
-      if (account && user) {
-        console.log('[JWT] Processing initial sign-in with account data');
+      // Initial sign in with GitHub
+      if (
+        account &&
+        profile &&
+        account.provider === 'github' &&
+        account.access_token
+      ) {
+        try {
+          console.log('[JWT] Processing initial sign in with GitHub');
 
-        // If we have GitHub access token directly from OAuth
-        if (account.access_token) {
-          console.log('[JWT] Using GitHub access token from account');
-          token.accessToken = account.access_token;
-          token.providerAccountId = account.providerAccountId;
-        }
+          // Exchange GitHub token with our backend API
+          const apiClient = (await import('./lib/apiClient')).default;
+          const authApi = (await import('./lib/apiClient')).authApi;
 
-        // If we have GitHub profile data
-        if (user) {
-          token.id = user.id;
-          token.name = user.name;
-          token.email = user.email;
-          token.image = user.image;
-        }
+          console.log('[JWT] Exchanging GitHub token with backend API');
+          const exchangeResult = await authApi.exchangeGithubToken(
+            account.access_token,
+          );
 
-        // If we need to exchange the code for tokens with our backend
-        if (
-          account.provider === 'github' &&
-          !token.jwt &&
-          account.access_token
-        ) {
-          try {
-            console.log(
-              '[JWT] Getting our own JWT from backend using GitHub token',
-            );
+          if (exchangeResult && exchangeResult.accessToken) {
+            console.log('[JWT] Successfully exchanged token with backend');
 
-            // Exchange the GitHub token for our application JWT using our API client
-            try {
-              const data = await authApi.exchangeGithubToken(
-                account.access_token,
-              );
-              token.jwt = data.accessToken;
-              console.log('[JWT] Successfully obtained application JWT');
-            } catch (error) {
-              console.error('[JWT] Failed to exchange GitHub token:', error);
+            // Store the backend-issued JWT in our token
+            token.accessToken = exchangeResult.accessToken;
+
+            // Store user information if available
+            if (exchangeResult.user) {
+              token.userId = exchangeResult.user.id;
+              token.userEmail = exchangeResult.user.email;
+              token.userName = exchangeResult.user.name;
             }
-          } catch (error) {
-            console.error('[JWT] Error exchanging GitHub token:', error);
+
+            console.log('[JWT] Token updated with backend JWT');
+          } else {
+            // Fallback to GitHub token if exchange fails
+            console.log(
+              '[JWT] Token exchange failed, using GitHub token as fallback',
+            );
+            token.accessToken = account.access_token;
           }
+        } catch (error) {
+          console.error('[JWT] Error exchanging token with backend:', error);
+          // Fallback to GitHub token
+          token.accessToken = account.access_token;
         }
       }
 
+      console.log(`[JWT] Token after:`, JSON.stringify(token, null, 2));
       return token;
     },
 
     async session({ session, token }: SessionProps) {
-      // Make the JWT available to the client
-      session.jwt = token.jwt;
+      console.log('[Session] Callback starting');
+      console.log(
+        `[Session] Session before:`,
+        JSON.stringify(session, null, 2),
+      );
+      console.log(`[Session] Token:`, JSON.stringify(token, null, 2));
 
-      // Pass user data to the session
-      if (token.id) {
-        session.user.id = token.id;
-        session.user.name = token.name || session.user.name;
-        session.user.email = token.email || session.user.email;
-        session.user.image = token.image || session.user.image;
+      if (token && session) {
+        // Make sure user object exists
+        if (!session.user) {
+          session.user = {
+            id: '',
+            name: '',
+            email: '',
+            image: '',
+          };
+        }
+
+        // Set user ID from token
+        if (token.sub) {
+          session.user.id = token.sub;
+        }
+
+        // Use backend user info if available
+        if (token.userId) {
+          session.user.id = token.userId;
+        }
+
+        if (token.userName) {
+          session.user.name = token.userName;
+        }
+
+        if (token.userEmail) {
+          session.user.email = token.userEmail;
+        }
+
+        // Add access token to the session for API calls
+        if (token.accessToken) {
+          session.accessToken = token.accessToken;
+          console.log('[Session] Added access token to session');
+        } else {
+          console.log('[Session] No access token in token object');
+        }
       }
 
+      console.log(`[Session] Session after:`, JSON.stringify(session, null, 2));
       return session;
     },
 
     async authorized({ auth, request }: { auth: any; request: NextRequest }) {
+      console.log('[Auth] Authorized callback', request.nextUrl.pathname);
       // Make sure the user is logged in
       const isLoggedIn = !!auth?.user;
+      console.log('[Auth] User is logged in:', isLoggedIn);
 
       // Get the JWT from the session
-      const jwt = auth?.jwt;
+      const accessToken = auth?.accessToken;
+      console.log('[Auth] Has access token:', !!accessToken);
 
-      // If user is logged in and has a valid JWT, add it to API requests
-      if (isLoggedIn && jwt && request.nextUrl.pathname.startsWith('/api/')) {
-        request.headers.set('Authorization', `Bearer ${jwt}`);
+      // If user is logged in and has a valid JWT, set our custom cookies
+      if (isLoggedIn && accessToken) {
+        // Set our custom access_token cookie if not in middleware
+        if (request.nextUrl.pathname.startsWith('/api/')) {
+          console.log('[Auth] Setting Authorization header for API request');
+          request.headers.set('Authorization', `Bearer ${accessToken}`);
+        }
+
+        // When handling a non-API request, we can set cookies
+        // This cookie will be detected by our middleware
+        if (
+          !request.nextUrl.pathname.startsWith('/api/') &&
+          typeof Response !== 'undefined'
+        ) {
+          // Use NextResponse to set cookies - this works in authorized callback
+          console.log('[Auth] Setting custom cookies for middleware detection');
+          const response = NextResponse.next();
+          response.cookies.set('access_token', accessToken, {
+            httpOnly: true,
+            path: '/',
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 60 * 60 * 24 * 7, // 1 week
+          });
+        }
       }
 
       // For protected routes, require a logged in user
@@ -136,3 +251,11 @@ export const {
     },
   },
 });
+
+// Extend the session type
+declare module 'next-auth' {
+  interface Session {
+    user: User;
+    accessToken?: string;
+  }
+}
