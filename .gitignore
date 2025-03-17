@@ -61,3 +61,15 @@ pnpm-debug.log*
 .DS_Store
 *.pem
 pnpm-lock.yaml
+
+# Docs
+docs/.vitepress/cache
+docs/.vitepress/temp
+docs/.vitepress/dist
+docs/.vitepress/build
+docs/.vitepress/cache
+docs/.vitepress/temp
+docs/.vitepress/dist
+
+# Database
+.db/
