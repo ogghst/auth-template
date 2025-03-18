@@ -1,4 +1,4 @@
-theme: jekyll-theme-minima
+theme: jekyll-theme-minimal
 
 title: Auth Template Documentation
 description: A secure full-stack authentication template using Next.js and NestJS
@@ -7,10 +7,7 @@ baseurl: '/auth-template'
 url: 'https://ogghst.github.io'
 
 github:
-  repository_url: https://github.com/ogghst/auth-template
-
-include:
-  - _includes
+  repository_url: https://ogghst.github.io/auth-template
 
 header_pages:
   - index.md
