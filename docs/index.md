@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Auth Template Documentation
 
 A secure full-stack authentication template using Next.js 14 and NestJS 10.
